@@ -1,51 +1,81 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+library(readr)
+spotify_2000_2023 <- read_delim("Datos/spotify_2000_2023.csv", 
+                                delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(spotify_2000_2023)
+glimpse(spotify_2000_2023)
+
 
 library(shiny)
+library(shinydashboard)
+library(dplyr)
+library(plotly)
+library(DT)
+library(readr)
+library(janitor)
+library(openxlsx)
 
-# Define UI for application that draws a histogram
-ui <- fluidPage(
+Spotify <- read_delim("Datos/spotify_2000_2023.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
+Spotify <- Spotify |>
+  clean_names ()
 
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
+year <- sort(unique(Spotify$year))  
+genre <- unique(Spotify$top_genre)
 
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
+ui <- dashboardPage(
+  skin = "purple",
+  dashboardHeader(title = "Spotify 2000 al 2023", titleWidth = 300),
+  dashboardSidebar(
+    width = 300,
+    fluidRow(
+      offset = 1, 
+      align = "center",
+      selectInput("year_filter", "Seleccione el Año:", choices = year, selected = year)
+    ),
+    fluidRow(
+      offset = 1, 
+      align = "center",
+      selectInput("genre_filter", "Seleccione el Género:", choices = genre, selected = NULL)
+    ),
+    fluidRow(
+      offset = 1, 
+      align = "center",
+      downloadButton("download_btn", "Descargar Información seleccionada")
     )
+  ),
+  dashboardBody(
+    box(
+      title = "Grafico de dispersión",
+      status = "primary",
+      solidHeader = TRUE,
+      fluidRow(
+        column(3, offset = 1, align = "center",
+               selectInput(
+                 inputId = "VariableX", 
+                 label = "Selecciona la variable para el eje X", 
+                 choices = c("bpm", "energy", "danceability", "dB", "liveness", "valence", "duration", "acousticness", "speechiness"),
+                 multiple = FALSE
+               )
+        ),
+        column(3, offset = 1, align = "center",
+               actionButton("enter_scatter_plot", "Generar gráfico de dispersión")
+        )
+      ),
+      plotlyOutput("scatter_plot")
+    ),
+    box(
+      title = "Tabla con características de las Canciones",
+      status = "primary",
+      solidHeader = TRUE,
+      DTOutput("filtered_table")
+    )
+  )
 )
-
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
-}
-
-# Run the application 
-shinyApp(ui = ui, server = server)
+  
+  server <- function(input, output, session) {
+    
+  }
+  
+  # App
+  shinyApp(ui = ui, server = server)
+  
