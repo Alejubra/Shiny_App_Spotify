@@ -72,10 +72,49 @@ ui <- dashboardPage(
   )
 )
   
-  server <- function(input, output, session) {
-    
-  }
+server <- function(input, output, session) {
   
-  # App
-  shinyApp(ui = ui, server = server)
+  Spotify <- reactive({
+    read_delim("Datos/spotify_2000_2023.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  })
+  
+  output$download_btn <- downloadHandler(
+    filename = function() {
+      paste("filtered_Spotify_", input$year_filter, " ", input$genre_filter, ".xlsx", sep = "")
+    },
+    content = function(file) {
+      filtered_Spotify <- Spotify() |>
+        filter(year == as.numeric(input$year_filter)) |> 
+        filter(top_genre == input$genre_filter | is.null(input$genre_filter))
+      
+      write.csv(filtered_Spotify, file, rowNames = FALSE)
+    }
+  )
+  
+  output$scatter_plot <- renderPlotly({
+    filtered_Spotify <- Spotify() |>
+      filter(year == as.numeric(input$year_filter)) |> 
+      filter(top_genre == input$genre_filter | is.null(input$genre_filter))
+    
+    plot_ly(filtered_Spotify, 
+            x = ~input$VariableX, 
+            y = ~popularity, 
+            text = ~title,  
+            type = "scatter", 
+            mode = "markers") |>
+      layout(title = paste("Interactive Scatter Plot of Energy vs Popularity (", input$year_filter, ")"),
+             xaxis = list(title = input$VariableX),
+             yaxis = list(title = "Popularity"))
+  })
+  
+  output$filtered_table <- renderDT({
+    filtered_Spotify <- Spotify() |>
+      filter(year == as.numeric(input$year_filter)) |> 
+      filter(top_genre == input$genre_filter | is.null(input$genre_filter))
+    
+    datatable(filtered_Spotify, options = list(pageLength = 10))
+  })
+}
+shinyApp(ui, server)
+
   
